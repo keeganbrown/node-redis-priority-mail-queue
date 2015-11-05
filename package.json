@@ -1,0 +1,14 @@
+{
+  "name": "node-redis-priority-mail-queue",
+  "version": "1.0.0",
+  "description": "Redis-based Mail Queue System built for Gigsalad",
+  "main": "mail-queue.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "Keegan Brown for Gigsalad",
+  "license": "ISC",
+  "dependencies": {
+    "node-redis": "^0.1.7"
+  }
+}
