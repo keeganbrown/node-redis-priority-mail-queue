@@ -9,6 +9,6 @@
   "author": "Keegan Brown for Gigsalad",
   "license": "ISC",
   "dependencies": {
-    "node-redis": "^0.1.7"
+    "redis": "^2.3.0"
   }
 }
