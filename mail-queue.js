@@ -36,7 +36,7 @@ function build_email_jobs_multi (client, email_job_ids, final_callback) {
 }
 function send_collected_emails (responses, client, final_callback) {
 	let email_promises = [];
-	console.log( 'MULTI EXEC:', responses );
+	//console.log( 'MULTI EXEC:', responses );
 	responses.forEach((email_job, index, arr) => {
 		if ( !!email_job && !!email_job.job_id && !!email_job.data ) {
 			email_promises.push(new Promise( (resolve, reject) => {
