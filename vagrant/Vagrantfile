@@ -15,7 +15,8 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 	# Sync parent folder. Clone this repo into project folder.
 	# I Like to work this way so I don't have vagrant files running all over my code.
 	# Parent folder will have the name of your app
-	config.vm.synced_folder "../", "/home/vagrant/"+File.basename(File.expand_path('..')), :nfs => true, :mount_options => ['actimeo=2']
+	# USE NFS IF USING A BUILD SYSTEM AND FILE IO IS A PROBLEM
+	config.vm.synced_folder "../", "/home/vagrant/"+File.basename(File.expand_path('..')) #, :nfs => true, :mount_options => ['actimeo=2']
 
 	# EDIT THE SCRIPT REFERENCED BELOW TO 
 	config.vm.provision "shell", path: "setup.sh", privileged: false

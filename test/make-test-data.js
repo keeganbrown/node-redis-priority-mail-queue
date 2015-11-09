@@ -10,7 +10,7 @@ function generate_email_data () {
 	});
 }
 function collect_email_data () {
-	let collection = [], limit = 100;
+	let collection = [], limit = 1000;
 	while (limit--) {
 		collection.push( generate_email_data() );
 	}

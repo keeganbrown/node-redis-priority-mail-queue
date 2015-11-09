@@ -16,4 +16,4 @@ sudo rm /etc/redis/6379.conf
 sudo cp redis_init_script /etc/init.d/redis_6379
 sudo cp redis.conf /etc/redis/6379.conf
 sudo update-rc.d redis_6379 defaults
-/etc/init.d/redis_6379 start
+sudo /etc/init.d/redis_6379 start
