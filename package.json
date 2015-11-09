@@ -4,12 +4,13 @@
   "description": "Redis-based Mail Queue System built for Gigsalad",
   "main": "mail-queue.js",
   "scripts": {
+    "start": "node mail-queue.js",
     "test": "php test/queue_email.php & node mail-queue.js"
   },
   "author": "Keegan Brown for Gigsalad",
   "license": "ISC",
   "dependencies": {
-    "mandrill": "^0.1.0",
+    "mandrill-api": "^1.0.45",
     "redis": "^2.3.0"
   }
 }

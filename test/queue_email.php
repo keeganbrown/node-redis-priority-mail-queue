@@ -11,7 +11,7 @@ function queue_email($email, $priority = '9')
 	$port = 6379;
 	$redis_connected = $redis->pconnect($host, $port);
 
-	echo "Test Redis Connection: $redis_connected\n";
+	echo "Redis Connected: $redis_connected\n";
 	if ($redis_connected)
 	{
 		$email_job = [];
@@ -34,12 +34,19 @@ function queue_email($email, $priority = '9')
 
 /**
  * Grab and push test email data into redis
+ * @param $limit_rounds number of time function will execute recurstively
  */
-function init () {
+function init ( $limit_rounds = 5 ) {
+	$limit_rounds--;
 	$email_data_array = json_decode( exec('node test/make-test-data.js') );
 	
 	foreach ($email_data_array as $key => $email_data_item) {
 		queue_email( $email_data_item, rand(0,10) );
+	}
+	if ( $limit_rounds > 0 ) {
+		echo "queue_email sleeping for 20. Rounds left: $limit_rounds.";
+		sleep(20);
+		init($limit_rounds);
 	}
 }
 

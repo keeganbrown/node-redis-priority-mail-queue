@@ -1,14 +1,24 @@
 "use strict";
+var config;
+try {
+	config = require('./config.js');
+} catch (e) {
+	throw "Need to add a config.js file. See config.example.js for example."
+}
+
 const redis = require('redis'),
 	client = redis.createClient(),
+	mandrill = require('mandrill-api/mandrill'),
+	mandrill_client = new mandrill.Mandrill(config.MANDRILL_API_KEY),
 	FIELD_MAP = {
 		SET: 'mail_sender:email_jobs',
 		HASH: 'mail_sender:email_job'
 	},
 	idle_poll_interval = 1000,
-	how_many_to_fetch = 10, //This number dramatically effects the throughput of the script. Higher = faster.
+	how_many_to_fetch = 100, //This number dramatically effects the throughput of the script. Higher == faster, more memory overhead.
 	performance_timer = Date.now(); //this can be removed, it's for throughput testing only
 
+var mandrill_user_info = null;
 
 function fetch_data ( client, final_callback ) {
 	console.log('fetch more data. performance: ', Date.now()-performance_timer);
@@ -67,10 +77,14 @@ function process_email_job (email_job, resolve, reject) {
 	});
 }
 function send_email ( email_job, resolve, reject ) {
-	setTimeout(() => {
-		console.log( 'SENT:', email_job );
-		resolve(email_job);
-	}, Math.floor((Math.random()*200)+100) );
+	mandrill_client.messages.send(
+		{'message': JSON.parse(email_job.data), 'async': true }, //with async set to true, this should move really quickly
+		function(result) {
+			console.log( 'SENT:', result );
+			resolve(email_job);
+		}, function(e) {
+		    console.log('A mandrill error occurred: ' + e.name + ' - ' + e.message);
+		});
 }
 
 
@@ -98,7 +112,14 @@ function assign_listeners ( client ) {
 	client.on('drain', () => { console.log('redis client drain') });
 }
 function init_mailer ( client ) {
-	assign_listeners( client );
+	mandrill_client.users.info({}, 
+		(result) => {
+			mandrill_user_info = result;
+			console.log( mandrill_user_info );
+			assign_listeners( client );
+		}, (error) => {
+			console.log( error );
+		});
 }
 
 init_mailer(client);
