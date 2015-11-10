@@ -141,6 +141,7 @@ function assign_listeners ( client ) {
 }
 function init_mailer ( client ) {
 	assign_listeners( client );
+/*
 	mandrill_client.users.info({}, 
 		(result) => {
 			mandrill_user_info = result;
@@ -148,6 +149,7 @@ function init_mailer ( client ) {
 		}, (error) => {
 			console.log( error );
 		});
+*/
 }
 
 init_mailer(client);
