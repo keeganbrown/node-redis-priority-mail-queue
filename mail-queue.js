@@ -102,6 +102,9 @@ function send_email ( email_job, resolve, reject, client ) {
 }
 function handle_send_rejection (email_job, resolve, reject, result) {
 	//Should we handle rejections differently? Do anything special?
+	//Possible cases: 
+	//"hard-bounce", "soft-bounce", "spam", "unsub", "custom", 
+	//"invalid-sender", "invalid", "test-mode-limit", "rule"
 	resolve(email_job);		
 }
 function reinsert_email_job (email_job, resolve, reject, client) {
