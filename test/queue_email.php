@@ -36,16 +36,16 @@ function queue_email($email, $priority = '9')
  * Grab and push test email data into redis
  * @param $limit_rounds number of time function will execute recurstively
  */
-function init ( $limit_rounds = 5 ) {
+function init ( $limit_rounds = 10 ) {
 	$limit_rounds--;
-	$email_data_array = json_decode( exec('node test/make-test-data.js') );
+	$email_data_array = json_decode( exec('node test/make-test-data.js 100') );
 	
 	foreach ($email_data_array as $key => $email_data_item) {
 		queue_email( $email_data_item, rand(0,10) );
 	}
 	if ( $limit_rounds > 0 ) {
-		echo "queue_email sleeping for 20. Rounds left: $limit_rounds.";
-		sleep(20);
+		echo "queue_email sleeping. Rounds left: $limit_rounds.";
+		sleep(5);
 		init($limit_rounds);
 	}
 }

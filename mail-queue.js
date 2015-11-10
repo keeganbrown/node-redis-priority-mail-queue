@@ -8,24 +8,29 @@ try {
 
 const redis = require('redis'),
 	client = redis.createClient(),
+	pubsubclient = redis.createClient(),
+
 	mandrill = require('mandrill-api/mandrill'),
 	mandrill_client = new mandrill.Mandrill(config.MANDRILL_API_KEY),
+
 	FIELD_MAP = {
+		INDEX: 'mail_sender:email_job_index',
 		SET: 'mail_sender:email_jobs',
 		HASH: 'mail_sender:email_job'
 	},
-	idle_poll_interval = 1000,
-	how_many_to_fetch = 100, //This number dramatically effects the throughput of the script. Higher == faster, more memory overhead.
+
+	idle_poll_interval = 1000, //Lower this number to increase the speed of the db polling on idle.
+	how_many_to_fetch = 30, //This number dramatically effects the throughput of the script. Higher == faster, more memory overhead.
 	performance_timer = Date.now(); //this can be removed, it's for throughput testing only
 
-var mandrill_user_info = null;
+//var mandrill_user_info = null;
 
 function fetch_data ( client, final_callback ) {
-	console.log('fetch more data. performance: ', Date.now()-performance_timer);
+	console.log('fetch more data. performance: ', Date.now()-performance_timer, process.memoryUsage());
 
 	client.sort(FIELD_MAP.SET, "limit", "0", how_many_to_fetch, "by", 
 		`${FIELD_MAP.HASH}:*->priority.created`, (err, email_job_ids) => {
-			build_email_jobs_multi(client, email_job_ids, final_callback);
+			build_email_jobs_multi( client, email_job_ids, final_callback );
 		});
 }
 function build_email_jobs_multi (client, email_job_ids, final_callback) {
@@ -50,7 +55,7 @@ function send_collected_emails (responses, client, final_callback) {
 	responses.forEach((email_job, index, arr) => {
 		if ( !!email_job && !!email_job.job_id && !!email_job.data ) {
 			email_promises.push(new Promise( (resolve, reject) => {
-				process_email_job(email_job, resolve, reject);
+				process_email_job(email_job, resolve, reject, client);
 			}));
 		}
 	});
@@ -61,29 +66,52 @@ function send_collected_emails (responses, client, final_callback) {
 				final_callback( client, final_callback );
 			}, function () {
 				console.log('Promise queue failed. Some entries might be lost.');
-				final_callback( client, final_callback );
+				process.nextTick( do_idle_redis_poll );
 			});
 	} else {
 		console.log(`No email jobs found. Waiting ${idle_poll_interval}ms to try again.`);
-		setTimeout(() => {
-			final_callback( client, final_callback );			
-		}, idle_poll_interval);
+		process.nextTick( do_idle_redis_poll );
 	}
 }
-function process_email_job (email_job, resolve, reject) {
+function do_idle_redis_poll () {
+	setTimeout(() => {
+		fetch_data( client, fetch_data );			
+	}, idle_poll_interval);
+}
+function process_email_job (email_job, resolve, reject, client) {
 	//Asyncronize the sending function.
 	process.nextTick(() => {
-		send_email( email_job, resolve, reject );
+		send_email( email_job, resolve, reject, client );
 	});
 }
-function send_email ( email_job, resolve, reject ) {
+function send_email ( email_job, resolve, reject, client ) {
 	mandrill_client.messages.send(
-		{'message': JSON.parse(email_job.data), 'async': true }, //with async set to true, this should move really quickly
+		{'message': JSON.parse(email_job.data), 'async': true },
 		function(result) {
-			console.log( 'SENT:', result );
-			resolve(email_job);
+			console.log( 'EMAIL JOB:', email_job.job_id, result.status );
+			if ( result.status == 'rejected' ) {
+				handle_send_rejection( email_job, resolve, reject, result );
+			} else {
+				resolve(email_job);				
+			}
 		}, function(e) {
+			//This will usually occur if the API is unavailable for some reason.
 		    console.log('A mandrill error occurred: ' + e.name + ' - ' + e.message);
+		    reinsert_email_job(email_job, resolve, reject, client);	    
+		});
+}
+function handle_send_rejection (email_job, resolve, reject, result) {
+	//Should we handle rejections differently? Do anything special?
+	resolve(email_job);		
+}
+function reinsert_email_job (email_job, resolve, reject, client) {
+	console.log('API ERROR. Adding email job back to redis.', email_job.job_id );
+	client.multi()
+		.hmset( get_email_job_key(email_job.job_id), email_job ) //inserts or overwrites
+		.zadd( FIELD_MAP.SET, 0, email_job.job_id) // inserts
+		.exec( (err, responses) => { 
+			console.log('Email Re-added.', email_job);
+			resolve(email_job);
 		});
 }
 
@@ -92,6 +120,7 @@ function get_email_job_key ( email_job_id ) {
 	return `${FIELD_MAP.HASH}:${email_job_id}`;
 }
 function assign_listeners ( client ) {
+	console.log('assign redis client listeners');
 	client.on('ready', () => { 
 		console.log('redis client ready');
 	})
@@ -99,24 +128,20 @@ function assign_listeners ( client ) {
 		console.log('redis client connected');
 		fetch_data( client, fetch_data );
 	})
-
-	//consider redis pubsub techique?
-	//client.subscribe('mail_sender:email_jobs');
-	//client.on('message', on_email_job_published);
-
+	client.on('error', (e) => { 
+		console.log('redis client error', e);
+	});
 	client.on('reconnecting', () => { console.log('redis client reconnecting') });
-	client.on('error', (e) => { console.log('redis client error', e) });
-
 	client.on('idle', () => { console.log('redis client idle') });
 	client.on('end', () => { console.log('redis client end') });
 	client.on('drain', () => { console.log('redis client drain') });
 }
 function init_mailer ( client ) {
+	assign_listeners( client );
 	mandrill_client.users.info({}, 
 		(result) => {
 			mandrill_user_info = result;
 			console.log( mandrill_user_info );
-			assign_listeners( client );
 		}, (error) => {
 			console.log( error );
 		});

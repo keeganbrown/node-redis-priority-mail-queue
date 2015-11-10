@@ -18,7 +18,7 @@ function generate_email_data () {
 	});
 }
 function collect_email_data () {
-	let collection = [], limit = 1000;
+	let collection = [], limit = ( process.argv[2] && parseInt(process.argv[2]) > 0 ) ? parseInt(process.argv[2]) : 1000;
 	while (limit--) {
 		collection.push( generate_email_data() );
 	}

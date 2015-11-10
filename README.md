@@ -1,5 +1,4 @@
-# NodeJS Email Queueing System with Redis
-__________
+# NodeJS Email Queueing System with Redis and Mandrill
 To test the code (adds 1000 entries to redis, and then 'sends' them all):
 ````bash
 vagrant up
