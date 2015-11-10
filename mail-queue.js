@@ -88,8 +88,8 @@ function send_email ( email_job, resolve, reject, client ) {
 	mandrill_client.messages.send(
 		{'message': JSON.parse(email_job.data), 'async': true },
 		function(result) {
-			console.log( 'EMAIL JOB:', email_job.job_id, result.status );
-			if ( result.status == 'rejected' ) {
+			console.log( 'EMAIL JOB:', email_job.job_id, result[0].status );
+			if ( result && result[0] && result[0].status == 'rejected' ) {
 				handle_send_rejection( email_job, resolve, reject, result );
 			} else {
 				resolve(email_job);				
